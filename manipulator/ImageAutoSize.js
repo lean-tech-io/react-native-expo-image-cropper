@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React from 'react';
 import PropTypes from 'prop-types';
 import { getImageSizeFitWidth, getImageSizeFitWidthFromCache, NOOP, DEFAULT_HEIGHT } from './utils';
 import {View, Image} from 'react-native'
@@ -49,7 +49,7 @@ function ImageAutoSize(props) {
 
   const imageStyles = { height };
   return (
-    <View style={{width, height, justifyContent:'center', alignItems:'center'}}>
+    <View style={{height, justifyContent:'center', alignItems:'center', flex:1, backgroundColor:'red'}}>
     <Image
           source={source}
           style={[imageStyles, style]}

@@ -378,7 +378,7 @@ class ExpoImageManipulator extends Component {
                             // pinchGestureEnabled={cropMode ? false : pinchGestureEnabled}
                         >
                             <ImageAutoSize
-                                style={{ backgroundColor: 'black' }}
+                                style={{ backgroundColor: 'red' }}
                                 source={{ uri }}
                                 resizeMode={imageRatio >= 1 ? "contain" : 'contain'}
                                 width={width}
