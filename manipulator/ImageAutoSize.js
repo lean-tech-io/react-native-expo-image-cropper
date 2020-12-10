@@ -1,76 +1,98 @@
-import React from 'react';
+import React, { PureComponent } from 'react';
+import Image from 'react-native-android-image-polyfill';
+import { StyleSheet } from 'react-native';
 import PropTypes from 'prop-types';
-import { getImageSizeFitWidth, getImageSizeFitWidthFromCache, NOOP, DEFAULT_HEIGHT } from './utils';
-import {View, Image} from 'react-native'
 
-function ImageAutoSize(props) {
-  const {
-    onHeightChange,
-    source,
-    width,
-    style,
-    maxHeight,
-    onError,
-    ...rest
-  } = props;
-  const [height, setHeight] = useState(
-    getImageSizeFitWidthFromCache(source, width, maxHeight).height ||
-      DEFAULT_HEIGHT
-  );
-  const mountedRef = useRef(false);
+import { getImageSizeFitWidth, getImageSizeFitWidthFromCache } from './cache';
+import { NOOP, DEFAULT_HEIGHT } from './helpers';
 
-  useEffect(function () {
-    mountedRef.current = true;
-    return function () {
-      mountedRef.current = false;
-    };
-  }, []);
+// remove `resizeMode` props from `Image.propTypes`
+const { resizeMode, ...ImagePropTypes } = Image.propTypes;
 
-  useEffect(
-    function () {
-      (async function () {
-        try {
-          const { height: newHeight } = await getImageSizeFitWidth(
-            source,
-            width,
-            maxHeight
-          );
-          if (mountedRef.current) {
-            setHeight(newHeight);
-            onHeightChange(newHeight);
-          }
-        } catch (e) {
-          onError(e);
+export default class AutoHeightImage extends PureComponent {
+  static propTypes = {
+    ...ImagePropTypes,
+    width: PropTypes.number.isRequired,
+    onHeightChange: PropTypes.func
+  };
+
+  static defaultProps = {
+    onHeightChange: NOOP
+  };
+
+  constructor(props) {
+    super(props);
+    this.setInitialImageHeight();
+  }
+
+  updateSequence = 0;
+
+  async componentDidMount() {
+    this.hasMounted = true;
+    await this.updateImageHeight(this.props);
+  }
+
+  async componentDidUpdate() {
+    await this.updateImageHeight(this.props);
+  }
+
+  componentWillUnmount() {
+    this.hasMounted = false;
+    // clear memory usage
+    this.updateSequence = null;
+  }
+
+  setInitialImageHeight() {
+    const { source, width, onHeightChange } = this.props;
+    const { height = DEFAULT_HEIGHT } = getImageSizeFitWidthFromCache(
+      source,
+      width
+    );
+    this.state = { height };
+    this.styles = StyleSheet.create({ image: { width, height } });
+    onHeightChange(height);
+  }
+
+  async updateImageHeight(props) {
+    if (
+      this.state.height === DEFAULT_HEIGHT ||
+      this.props.width !== props.width ||
+      this.props.source !== props.source
+    ) {
+      // image height could not be `0`
+      const { source, width, onHeightChange } = props;
+      try {
+        const updateSequence = ++this.updateSequence;
+        const { height } = await getImageSizeFitWidth(source, width);
+        if (updateSequence !== this.updateSequence) {
+          return;
         }
-      })();
-    },
-    [source, onHeightChange, width, maxHeight]
-  );
 
-  const imageStyles = { height };
-  return (
-    <View style={{height, justifyContent:'center', alignItems:'center', flex:1, backgroundColor:'red'}}>
-    <Image
-          source={source}
-          style={[imageStyles, style]}
-          {...rest}
-        />
-    </View>
-    
-  );
+        this.styles = StyleSheet.create({ image: { width, height } });
+        if (this.hasMounted) {
+          // guard `this.setState` to be valid
+          this.setState({ height });
+          onHeightChange(height);
+        }
+      } catch (ex) {
+        if (this.props.onError) {
+          this.props.onError(ex);
+        }
+      }
+    }
+  }
+
+  render() {
+    // remove `width` prop from `restProps`
+    const { source, style, width, ...restProps } = this.props;
+    return (
+      <View style={{height:restProps.height, justifyContent:'center', alignItems:'center'}}>
+      <Image
+            source={source}
+            style={[imageStyles, style]}
+            {...restProps}
+          />
+      </View>
+    );
+  }
 }
-
-ImageAutoSize.propTypes = {
-  width: PropTypes.number.isRequired,
-  maxHeight: PropTypes.number,
-  onHeightChange: PropTypes.func,
-  animated: PropTypes.bool
-};
-
-ImageAutoSize.defaultProps = {
-  maxHeight: Infinity,
-  onHeightChange: NOOP,
-  animated: false
-};
-
-export default ImageAutoSize;
