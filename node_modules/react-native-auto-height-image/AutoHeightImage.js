@@ -3,12 +3,11 @@
  * @author vivaxy
  */
 import React, { useEffect, useState, useRef } from 'react';
-import ImagePolyfill from './ImagePolyfill';
-import AnimatableImage from './AnimatableImage';
 import PropTypes from 'prop-types';
 
 import { getImageSizeFitWidth, getImageSizeFitWidthFromCache } from './cache';
 import { NOOP, DEFAULT_HEIGHT } from './helpers';
+import {View, Image} from 'react-native'
 
 // remove `resizeMode` props from `Image.propTypes`
 const { resizeMode, ...ImagePropTypes } = AnimatableImage.propTypes;
@@ -60,17 +59,19 @@ function AutoHeightImage(props) {
   );
 
   // StyleSheet.create will cache styles, not what we want
-  const imageStyles = { width, height };
+  const imageStyles = { height };
 
   // Since it only makes sense to use polyfill with remote images
-  const ImageComponent = source.uri ? ImagePolyfill : AnimatableImage;
+ 
   return (
-    <ImageComponent
-      source={source}
-      style={[imageStyles, style]}
-      onError={onError}
-      {...rest}
-    />
+    <View style={{width, height, justifyContent:'center', alignItems:'center'}}>
+    <Image
+          source={source}
+          style={[imageStyles, style]}
+          {...rest}
+        />
+    </View>
+    
   );
 }
 
