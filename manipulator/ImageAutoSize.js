@@ -61,7 +61,6 @@ function ImageAutoSize(props) {
 }
 
 ImageAutoSize.propTypes = {
-  ...ImagePropTypes,
   width: PropTypes.number.isRequired,
   maxHeight: PropTypes.number,
   onHeightChange: PropTypes.func,
