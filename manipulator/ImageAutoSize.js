@@ -7,7 +7,6 @@ import {View, Image} from 'react-native'
 
 export default class AutoHeightImage extends PureComponent {
   static propTypes = {
-    ...ImagePropTypes,
     width: PropTypes.number.isRequired,
     onHeightChange: PropTypes.func
   };
