@@ -84,7 +84,7 @@ export default class AutoHeightImage extends PureComponent {
       <View style={{height:restProps.height, justifyContent:'center', alignItems:'center'}}>
       <Image
             source={source}
-            style={[imageStyles, style]}
+            style={[this.styles.image, style]}
             {...restProps}
           />
       </View>
