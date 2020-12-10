@@ -13,12 +13,12 @@ import {
 import * as ImageManipulator from 'expo-image-manipulator'
 import * as FileSystem from 'expo-file-system'
 import PropTypes from 'prop-types'
-import AutoHeightImage from 'react-native-auto-height-image'
+import ImageAutoSize from './ImageAutoSize'
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons'
-import { ifIphoneX, isIphoneX, getStatusBarHeight, getBottomSpace } from 'react-native-iphone-x-helper'
+import { isIphoneX } from 'react-native-iphone-x-helper'
 import ImageCropOverlay from '../manipulator/ImageCropOverlay'
 
-const { width, height } = Dimensions.get('window')
+const { width } = Dimensions.get('window')
 
 YellowBox.ignoreWarnings(['componentWillReceiveProps', 'componentWillUpdate', 'componentWillMount']);
 YellowBox.ignoreWarnings([
@@ -147,7 +147,7 @@ class ExpoImageManipulator extends Component {
             )
             uriToCrop = response.uri
         }
-        Image.getSize(uri, async (width2, height2) => {
+        Image.getSize(uri, async () => {
             const { uri: rotUri, base64 } = await this.filp(uriToCrop, orientation)
             this.setState({ uri: rotUri, base64 })
         })
@@ -216,7 +216,7 @@ class ExpoImageManipulator extends Component {
         return manipResult;
     };
 
-    rotate = async (uri, width2, height2) => {
+    rotate = async (uri, width2) => {
         const { saveOptions } = this.props
         const manipResult = await ImageManipulator.manipulateAsync(uri, [{
             rotate: -90,
@@ -275,17 +275,12 @@ class ExpoImageManipulator extends Component {
         const {
             isVisible,
             onPictureChoosed,
-            borderColor = '#a4a4a4',
-            allowRotate = true,
-            pinchGestureEnabled,
-            btnTexts,
         } = this.props
         const {
             uri,
             base64,
             cropMode,
             processing,
-            zoomScale
         } = this.state
 
         let imageRatio = this.actualSize.height / this.actualSize.width
@@ -382,7 +377,7 @@ class ExpoImageManipulator extends Component {
                             // scrollEnabled={cropMode ? false : true}
                             // pinchGestureEnabled={cropMode ? false : pinchGestureEnabled}
                         >
-                            <AutoHeightImage
+                            <ImageAutoSize
                                 style={{ backgroundColor: 'black' }}
                                 source={{ uri }}
                                 resizeMode={imageRatio >= 1 ? "contain" : 'contain'}

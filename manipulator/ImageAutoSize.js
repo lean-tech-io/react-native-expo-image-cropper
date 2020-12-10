@@ -1,18 +1,9 @@
-/**
- * @since 2017-04-11 19:10:08
- * @author vivaxy
- */
 import React, { useEffect, useState, useRef } from 'react';
 import PropTypes from 'prop-types';
-
-import { getImageSizeFitWidth, getImageSizeFitWidthFromCache } from './cache';
-import { NOOP, DEFAULT_HEIGHT } from './helpers';
+import { getImageSizeFitWidth, getImageSizeFitWidthFromCache, NOOP, DEFAULT_HEIGHT } from './utils';
 import {View, Image} from 'react-native'
 
-// remove `resizeMode` props from `Image.propTypes`
-const { resizeMode, ...ImagePropTypes } = AnimatableImage.propTypes;
-
-function AutoHeightImage(props) {
+function ImageAutoSize(props) {
   const {
     onHeightChange,
     source,
@@ -45,8 +36,6 @@ function AutoHeightImage(props) {
             maxHeight
           );
           if (mountedRef.current) {
-            // might trigger `onHeightChange` with same `height` value
-            // dedupe maybe?
             setHeight(newHeight);
             onHeightChange(newHeight);
           }
@@ -58,11 +47,7 @@ function AutoHeightImage(props) {
     [source, onHeightChange, width, maxHeight]
   );
 
-  // StyleSheet.create will cache styles, not what we want
   const imageStyles = { height };
-
-  // Since it only makes sense to use polyfill with remote images
- 
   return (
     <View style={{width, height, justifyContent:'center', alignItems:'center'}}>
     <Image
@@ -75,7 +60,7 @@ function AutoHeightImage(props) {
   );
 }
 
-AutoHeightImage.propTypes = {
+ImageAutoSize.propTypes = {
   ...ImagePropTypes,
   width: PropTypes.number.isRequired,
   maxHeight: PropTypes.number,
@@ -83,10 +68,10 @@ AutoHeightImage.propTypes = {
   animated: PropTypes.bool
 };
 
-AutoHeightImage.defaultProps = {
+ImageAutoSize.defaultProps = {
   maxHeight: Infinity,
   onHeightChange: NOOP,
   animated: false
 };
 
-export default AutoHeightImage;
+export default ImageAutoSize;

@@ -81,3 +81,6 @@ export const getImageSizeFitWidth = async (image, toWidth, maxHeight) => {
     height: scaledHeight > maxHeight ? maxHeight : scaledHeight
   };
 };
+
+export const NOOP = () => {};
+export const DEFAULT_HEIGHT = 0;
