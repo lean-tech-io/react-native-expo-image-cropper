@@ -1,18 +1,23 @@
-import React, { PureComponent } from 'react';
-import { StyleSheet } from 'react-native';
-import PropTypes from 'prop-types';
+import React, { PureComponent } from "react";
+import { StyleSheet } from "react-native";
+import PropTypes from "prop-types";
 
-import { getImageSizeFitWidth, getImageSizeFitWidthFromCache , NOOP, DEFAULT_HEIGHT } from './utils';
-import {View, Image} from 'react-native'
+import {
+  getImageSizeFitWidth,
+  getImageSizeFitWidthFromCache,
+  NOOP,
+  DEFAULT_HEIGHT,
+} from "./utils";
+import { View, Image } from "react-native";
 
 export default class AutoHeightImage extends PureComponent {
   static propTypes = {
     width: PropTypes.number.isRequired,
-    onHeightChange: PropTypes.func
+    onHeightChange: PropTypes.func,
   };
 
   static defaultProps = {
-    onHeightChange: NOOP
+    onHeightChange: NOOP,
   };
 
   constructor(props) {
@@ -27,8 +32,8 @@ export default class AutoHeightImage extends PureComponent {
     await this.updateImageHeight(this.props);
   }
 
-  async componentDidUpdate() {
-    await this.updateImageHeight(this.props);
+  async componentDidUpdate(prevProps) {
+    await this.updateImageHeight(prevProps);
   }
 
   componentWillUnmount() {
@@ -52,17 +57,17 @@ export default class AutoHeightImage extends PureComponent {
     if (
       this.state.height === DEFAULT_HEIGHT ||
       this.props.width !== props.width ||
-      this.props.source !== props.source
+      this.props.source !== props.source ||
+      this.props.source.uri !== props.source.uri
     ) {
       // image height could not be `0`
-      const { source, width, onHeightChange } = props;
+      const { source, width, height: maxHeight, onHeightChange } = this.props;
       try {
         const updateSequence = ++this.updateSequence;
-        const { height } = await getImageSizeFitWidth(source, width);
+        const { height } = await getImageSizeFitWidth(source, width, maxHeight);
         if (updateSequence !== this.updateSequence) {
           return;
         }
-
         this.styles = StyleSheet.create({ image: { width, height } });
         if (this.hasMounted) {
           // guard `this.setState` to be valid
@@ -81,12 +86,18 @@ export default class AutoHeightImage extends PureComponent {
     // remove `width` prop from `restProps`
     const { source, style, width, ...restProps } = this.props;
     return (
-      <View style={{height:restProps.height, justifyContent:'center', alignItems:'center'}}>
-      <Image
-            source={source}
-            style={[this.styles.image, style]}
-            {...restProps}
-          />
+      <View
+        style={{
+          height: restProps.height,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <Image
+          source={source}
+          style={[this.styles.image, style]}
+          {...restProps}
+        />
       </View>
     );
   }
