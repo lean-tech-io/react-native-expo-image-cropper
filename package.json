@@ -1,6 +1,6 @@
 {
   "name": "react-native-expo-image-cropper",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Crop, rotate and filp image in your expo project!",
   "main": "index.js",
   "dependencies": {
