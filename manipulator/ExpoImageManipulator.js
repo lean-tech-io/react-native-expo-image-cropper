@@ -72,7 +72,7 @@ class ExpoImageManipulator extends Component {
             return;
         }
 
-        const { uri, width, height } = await ImageManipulator.manipulateAsync(
+        const { uri, width: imgWidth, height: imgHeight } = await ImageManipulator.manipulateAsync(
             rawUri,
             [
                 {
@@ -89,15 +89,24 @@ class ExpoImageManipulator extends Component {
         });
         this.lastUriProp = rawUri;
 
-        this.initialSize.width = width;
-        this.initialSize.height = height;
+        this.initialSize.width = imgWidth;
+        this.initialSize.height = imgHeight;
 
         if (originalCrop) {
+            const aspectRatio = width / this.initialSize.width;
+            let coordinates = JSON.parse(JSON.stringify(originalCrop));
+            if (aspectRatio < 1) {
+                Object.keys(coordinates).forEach((key) => {
+                    const { x, y } = coordinates[key];
+                    coordinates[key].x = x * aspectRatio;
+                    coordinates[key].y = y * aspectRatio;
+                });
+            }
             this.cropCoors = {
-                topLeft: originalCrop.topLeft,
-                bottomLeft: originalCrop.bottomLeft,
-                topRight: originalCrop.topRight,
-                bottomRight: originalCrop.bottomRight,
+                topLeft: coordinates.topLeft,
+                bottomLeft: coordinates.bottomLeft,
+                topRight: coordinates.topRight,
+                bottomRight: coordinates.bottomRight,
             };
         }
 
@@ -116,7 +125,9 @@ class ExpoImageManipulator extends Component {
                 { resize: { width: 1080 } },
             ]);
             this.setState({ initialUri: originalUri });
-            this.resetCropCoordinates();
+            if (!originalCrop) {
+                this.resetCropCoordinates();
+            }
         }
     }
 
