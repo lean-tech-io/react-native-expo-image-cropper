@@ -9,6 +9,7 @@ import {
     SafeAreaView,
     TouchableOpacity,
     NativeModules,
+    ActivityIndicator,
     YellowBox,
 } from "react-native";
 import * as ImageManipulator from "expo-image-manipulator";
@@ -39,12 +40,15 @@ class ExpoImageManipulator extends Component {
         this.state = {
             cropMode: false,
             processing: false,
+            calculatingPoints: false,
             zoomScale: 1,
             squareAspect,
             crop: null,
         };
 
         this.scrollOffset = 0;
+
+        this.cropped = false;
 
         this.maxSizes = {
             width: 0,
@@ -65,70 +69,44 @@ class ExpoImageManipulator extends Component {
         const {
             photo: { uri: rawUri },
             originalPhoto,
-            originalCrop,
         } = this.props;
         let initialUri = originalPhoto?.uri;
         if (rawUri === this.lastUriProp) {
             return;
         }
 
-        const { uri, width: imgWidth, height: imgHeight } = await ImageManipulator.manipulateAsync(
-            rawUri,
-            [
-                {
-                    resize: {
-                        width: 1080,
-                    },
+        const {
+            uri,
+            width: imgWidth,
+            height: imgHeight,
+        } = await ImageManipulator.manipulateAsync(rawUri, [
+            {
+                resize: {
+                    width: 1080,
                 },
-            ]
-        );
+            },
+        ]);
 
         this.setState({
             uri,
             initialUri,
         });
+
         this.lastUriProp = rawUri;
 
         this.initialSize.width = imgWidth;
         this.initialSize.height = imgHeight;
 
-        if (originalCrop) {
-            const aspectRatio = width / this.initialSize.width;
-            let coordinates = JSON.parse(JSON.stringify(originalCrop));
-            if (aspectRatio < 1) {
-                Object.keys(coordinates).forEach((key) => {
-                    const { x, y } = coordinates[key];
-                    coordinates[key].x = x * aspectRatio;
-                    coordinates[key].y = y * aspectRatio;
-                });
-            }
-            this.cropCoors = {
-                topLeft: coordinates.topLeft,
-                bottomLeft: coordinates.bottomLeft,
-                topRight: coordinates.topRight,
-                bottomRight: coordinates.bottomRight,
-            };
-        }
-
-        if (initialUri) {
-            Image.getSize(initialUri, (w, h) => {
-                this.initialSize.width = w;
-                this.initialSize.height = h;
-                if (!originalCrop) {
-                    this.resetCropCoordinates();
-                }
-            });
-        } else {
+        if (!initialUri) {
             const {
                 uri: originalUri,
             } = await ImageManipulator.manipulateAsync(rawUri, [
                 { resize: { width: 1080 } },
             ]);
+            initialUri = originalUri;
             this.setState({ initialUri: originalUri });
-            if (!originalCrop) {
-                this.resetCropCoordinates();
-            }
         }
+        this.onCalculateCoordinates(initialUri);
     }
 
     getCalculateCropSize(size) {
@@ -191,6 +169,9 @@ class ExpoImageManipulator extends Component {
         };
 
         const { uri } = await getUriManipulated();
+        if (action !== "crop") {
+            this.onCalculateCoordinates(uri);
+        }
         this.setState({ initialUri: uri });
         this.props.onImageManipulated({ action, payload });
     };
@@ -206,6 +187,35 @@ class ExpoImageManipulator extends Component {
         const { onToggleModal } = this.props;
         onToggleModal();
         this.setState({ cropMode: false });
+    };
+
+    onCalculateCoordinates = (uri = null) => {
+        this.resetCropCoordinates();
+        const { activatePointCalculation } = this.props;
+        if (activatePointCalculation) {
+            let _uri = `${uri || this.state.initialUri}`;
+            this.setState({ calculatingPoints: true });
+            this.calculateCoordinates(_uri, (coors, dimensions) => {
+                if (coors) {
+                    const aspectRatio = width / dimensions.width;
+                    let coordinates = JSON.parse(JSON.stringify(coors));
+                    if (aspectRatio < 1) {
+                        Object.keys(coordinates).forEach((key) => {
+                            const { x, y } = coordinates[key];
+                            coordinates[key].x = x * aspectRatio;
+                            coordinates[key].y = y * aspectRatio;
+                        });
+                    }
+                    this.cropCoors = {
+                        topLeft: coordinates.topLeft,
+                        bottomLeft: coordinates.bottomLeft,
+                        topRight: coordinates.topRight,
+                        bottomRight: coordinates.bottomRight,
+                    };
+                }
+                this.setState({ calculatingPoints: false });
+            });
+        }
     };
 
     onCropImage = async () => {
@@ -233,6 +243,7 @@ class ExpoImageManipulator extends Component {
         this.setState({ uri, base64: "", crop: this.cropCoors });
         this.setState({ cropMode: false, processing: false });
         FileSystem.deleteAsync(oldUri).catch(() => null);
+        this.cropped = true;
         this.props.onImageManipulated({ action: "crop", payload: coordinates });
     };
 
@@ -247,7 +258,7 @@ class ExpoImageManipulator extends Component {
             uriToCrop = response.uri;
         }
         Image.getSize(uri, async (width2, height2) => {
-            const { uri: rotUri, base64 } = await this.rotate(
+            const { uri: rotUri, base64, ...rest } = await this.rotate(
                 uriToCrop,
                 width2,
                 height2
@@ -256,16 +267,14 @@ class ExpoImageManipulator extends Component {
             const initialSizeHeight = this.initialSize.height;
             this.initialSize.height = this.initialSize.width;
             this.initialSize.width = initialSizeHeight;
-            this.resetCropCoordinates();
             this.onNewManipulationHandler({ action: "rotate" });
         });
     };
 
     onFlipImage = async (orientation) => {
         const { uri: uriToCrop } = this.state;
-        const { uri: rotUri, base64 } = await this.flip(uriToCrop, orientation);
-        this.setState({ uri: rotUri, base64 });
-        this.resetCropCoordinates();
+        const { uri: flipUri, base64 } = await this.flip(uriToCrop, orientation);
+        this.setState({ uri: flipUri, base64 });
         this.onNewManipulationHandler({ action: "flip", payload: orientation });
     };
 
@@ -343,6 +352,26 @@ class ExpoImageManipulator extends Component {
             );
         });
 
+    calculateCoordinates = (uri, callback) => {
+        NativeModules.ImageProcessorModule.doMagic(uri, (result) => {
+            const { detectedRectangle: r } = result;
+            if (r) {
+                const points = [r.bottomLeft, r.bottomRight, r.topLeft, r.topRight];
+                let coors = {};
+                for (const p of points) {
+                    let isTop = points.filter((f) => f.y < p.y).length <= 1;
+                    let isRight = points.filter((f) => f.x > p.x).length <= 1;
+                    if (isTop && !isRight) coors.topLeft = p;
+                    if (isTop && isRight) coors.topRight = p;
+                    if (!isTop && !isRight) coors.bottomLeft = p;
+                    if (!isTop && isRight) coors.bottomRight = p;
+                }
+                return callback(coors, r.dimensions);
+            }
+            callback(null);
+        });
+    };
+
     calculateMaxSizes = (event) => {
         let w1 = event.nativeEvent.layout.width || 100;
         let h1 = event.nativeEvent.layout.height || 100;
@@ -368,7 +397,15 @@ class ExpoImageManipulator extends Component {
 
     render() {
         const { isVisible, onPictureChoosed } = this.props;
-        const { uri, initialUri, base64, cropMode, processing, crop } = this.state;
+        const {
+            uri,
+            initialUri,
+            base64,
+            cropMode,
+            processing,
+            crop,
+            calculatingPoints,
+        } = this.state;
 
         const {
             cropHeight,
@@ -592,7 +629,7 @@ class ExpoImageManipulator extends Component {
                                 height={originalHeight}
                                 onLayout={this.calculateMaxSizes}
                             />
-                            {cropMode && (
+                            {cropMode && !calculatingPoints && (
                                 <ImageCropper
                                     initialWidth={cropWidth}
                                     initialHeight={cropHeight}
@@ -603,6 +640,22 @@ class ExpoImageManipulator extends Component {
                                     minWidth={100}
                                     onLayoutChanged={(coors) => (this.cropCoors = coors)}
                                 />
+                            )}
+                            {cropMode && calculatingPoints && (
+                                <View
+                                    style={{
+                                        position: "absolute",
+                                        width: cropWidth,
+                                        height: cropHeight,
+                                        top: cropInitialTop,
+                                        left: cropInitialLeft,
+                                        backgroundColor: "rgba(0,0,0,0.5)",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                    }}
+                                >
+                                    <ActivityIndicator color="white" size="large" />
+                                </View>
                             )}
                         </ScrollView>
                     </View>
@@ -630,22 +683,18 @@ ExpoImageManipulator.defaultProps = {
         format: ImageManipulator.SaveFormat.PNG,
         base64: false,
     },
+    activatePointCalculation: false,
 };
 
 ExpoImageManipulator.propTypes = {
     isVisible: PropTypes.bool.isRequired,
     onPictureChoosed: PropTypes.func,
+    activatePointCalculation: PropTypes.bool,
     btnTexts: PropTypes.object,
     saveOptions: PropTypes.object,
     photo: PropTypes.object.isRequired,
     onToggleModal: PropTypes.func.isRequired,
     dragVelocity: PropTypes.number,
     resizeVelocity: PropTypes.number,
-    originalCrop: PropTypes.shape({
-        topLeft: PropTypes.object,
-        bottomLeft: PropTypes.object,
-        topRight: PropTypes.object,
-        bottomRight: PropTypes.object,
-    }),
     onImageManipulated: PropTypes.func,
 };
