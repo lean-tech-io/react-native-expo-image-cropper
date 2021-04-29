@@ -42,10 +42,10 @@ class ImageCropper extends Component {
     };
 
     this.translate = {
-      topLeft: [{ translateX: -15 }, { translateY: -15 }],
-      bottomLeft: [{ translateX: -15 }, { translateY: -30 }],
-      topRight: [{ translateX: -30 }, { translateY: -15 }],
-      bottomRight: [{ translateX: -30 }, { translateY: -30 }],
+      topLeft: [{ translateX: -20 }, { translateY: -25 }],
+      bottomLeft: [{ translateX: -20 }, { translateY: -25 }],
+      topRight: [{ translateX: -25 }, { translateY: -20 }],
+      bottomRight: [{ translateX: -25 }, { translateY: -25 }],
     };
 
     this.state = {
