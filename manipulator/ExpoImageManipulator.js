@@ -357,8 +357,8 @@ class ExpoImageManipulator extends Component {
     
     calculateCoordinates = (uri, callback) => {
         NativeModules.ImageProcessorModule.detectRectangleFromImage(uri, (result) => {
-            const detectedPoints = Platform.OS === 'android' ? result.detectedRectangle : JSON.parse(result);
-            if (detectedPoints) {
+            if (result) {
+                const detectedPoints = Platform.OS === 'android' ? result.detectedRectangle : JSON.parse(result);
                 const points = [detectedPoints.bottomLeft, detectedPoints.bottomRight, detectedPoints.topLeft, detectedPoints.topRight];
                 let coors = {};
                 for (const p of points) {
