@@ -354,12 +354,12 @@ class ExpoImageManipulator extends Component {
                 }
             );
         });
-
+    
     calculateCoordinates = (uri, callback) => {
-        NativeModules.ImageProcessorModule.doMagic(uri, (result) => {
-            const { detectedRectangle: r } = result;
-            if (r) {
-                const points = [r.bottomLeft, r.bottomRight, r.topLeft, r.topRight];
+        NativeModules.ImageProcessorModule.detectRectangleFromImage(uri, (result) => {
+            const detectedPoints = Platform.OS === 'android' ? result.detectedRectangle : JSON.parse(result);
+            if (detectedPoints) {
+                const points = [detectedPoints.bottomLeft, detectedPoints.bottomRight, detectedPoints.topLeft, detectedPoints.topRight];
                 let coors = {};
                 for (const p of points) {
                     let isTop = points.filter((f) => f.y < p.y).length <= 1;
@@ -369,7 +369,7 @@ class ExpoImageManipulator extends Component {
                     if (!isTop && !isRight) coors.bottomLeft = p;
                     if (!isTop && isRight) coors.bottomRight = p;
                 }
-                return callback(coors, r.dimensions);
+                return callback(coors, detectedPoints.dimensions);
             }
             callback(null);
         });
