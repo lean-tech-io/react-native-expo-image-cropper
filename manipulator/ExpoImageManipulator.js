@@ -197,8 +197,10 @@ class ExpoImageManipulator extends Component {
             this.setState({ calculatingPoints: true });
             this.calculateCoordinates(_uri, (coors, dimensions) => {
                 if (coors) {
-                    const aspectRatio = width / dimensions.width;
+                    const { cropWidth } = this.getCalculateCropSize(dimensions);
+                    const aspectRatio = cropWidth / dimensions.width;
                     let coordinates = JSON.parse(JSON.stringify(coors));
+
                     if (aspectRatio < 1) {
                         Object.keys(coordinates).forEach((key) => {
                             const { x, y } = coordinates[key];
@@ -221,7 +223,8 @@ class ExpoImageManipulator extends Component {
     onCropImage = async () => {
         this.setState({ processing: true });
         const { initialUri, uri: oldUri } = this.state;
-        const aspectRatio = width / this.initialSize.width;
+        const { cropWidth } = this.getCalculateCropSize(this.initialSize);
+        const aspectRatio = cropWidth / this.initialSize.width;
 
         let coordinates = JSON.parse(JSON.stringify(this.cropCoors));
 
