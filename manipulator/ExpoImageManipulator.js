@@ -87,25 +87,20 @@ class ExpoImageManipulator extends Component {
             },
         ]);
 
-        this.setState({
-            uri,
-            initialUri,
-        });
+        this.setState({ uri });
 
         this.lastUriProp = rawUri;
 
         this.initialSize.width = imgWidth;
         this.initialSize.height = imgHeight;
 
-        if (!initialUri) {
-            const {
-                uri: originalUri,
-            } = await ImageManipulator.manipulateAsync(rawUri, [
-                { resize: { width: 1080 } },
-            ]);
-            initialUri = originalUri;
-            this.setState({ initialUri: originalUri });
-        }
+        const {
+            uri: originalUri,
+        } = await ImageManipulator.manipulateAsync(initialUri || rawUri, [
+            { resize: { width: 1080 } },
+        ]);
+
+        this.setState({ initialUri: originalUri });
         this.onCalculateCoordinates(initialUri);
     }
 
