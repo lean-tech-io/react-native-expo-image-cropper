@@ -101,7 +101,7 @@ class ExpoImageManipulator extends Component {
         ]);
 
         this.setState({ initialUri: originalUri });
-        this.onCalculateCoordinates(initialUri);
+        this.onCalculateCoordinates(originalUri);
     }
 
     getCalculateCropSize(size) {
