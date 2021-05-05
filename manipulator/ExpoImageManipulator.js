@@ -349,12 +349,18 @@ class ExpoImageManipulator extends Component {
                 }
             );
         });
-    
+
     calculateCoordinates = (uri, callback) => {
         NativeModules.ImageProcessorModule.detectRectangleFromImage(uri, (result) => {
-            if (result) {
+            if (
+                Platform.select({
+                    android: result?.detectedRectangle,
+                    ios: result
+                })
+            ) {
                 const detectedPoints = Platform.OS === 'android' ? result.detectedRectangle : JSON.parse(result);
                 const points = [detectedPoints.bottomLeft, detectedPoints.bottomRight, detectedPoints.topLeft, detectedPoints.topRight];
+
                 let coors = {};
                 for (const p of points) {
                     let isTop = points.filter((f) => f.y < p.y).length <= 1;
